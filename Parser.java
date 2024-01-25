@@ -1,5 +1,5 @@
 package parser;
-
+import java.util.Scanner;
 public final class Parser {
 	
 	//Token Types
@@ -179,7 +179,11 @@ public final class Parser {
 //
 //	}
 		
-		String expression="3/3/3";
+		
+		Scanner sc=new Scanner(System.in);
+		System.out.println("Input expression to be evaluated:");
+		String expression=sc.nextLine();
+		sc.close();
 		Parser obj=new Parser(expression);
 		try {
 		double result=obj.evaluate();
