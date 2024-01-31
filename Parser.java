@@ -26,9 +26,40 @@ public final class Parser {
 	//Token type, [NONE,DELIMITER,VARIABLE,NUMBER]
 	private int tokType;
 	
+	
+	//Array of values for variables, A-Z
+	double[] variables=new double[26];
+	
 	public Parser(String expression) 
 	{
 		this.exp=expression;
+	}
+	
+	//Empty constructor to allow changing the expression to be parsed after a default initialization
+	public Parser() 
+	{
+		this.exp="";
+	}
+	
+	//Set or change the expression the parser should evaluate, soft-resets the parser, but does not affect assigned variables
+	public void setExpression(String exp) 
+	{
+		this.exp=exp;
+		this.expIdx=0;
+	    this.token="";
+	    this.tokType=Parser.NONE;
+	}
+	
+	//Finds and returns the value for variables A-Z
+	private double findValue(String name) throws ParserException 
+	{
+		if(!Character.isLetter(name.charAt(0))) 
+		{
+			handleError(Parser.SYNTAX);
+            return 0.0;		
+		}
+		double value=variables[Character.toUpperCase(name.charAt(0))-'A'];
+		return value;
 	}
 	
 	//Checks if input character is a delimiter
@@ -179,23 +210,40 @@ public final class Parser {
 //
 //	}
 		
-		
+		Parser obj=new Parser();
 		Scanner sc=new Scanner(System.in);
+		PARSER_LOOP:
+		while(true)
+		{
 		System.out.println("Input expression to be evaluated:");
 		String expression=sc.nextLine();
-		sc.close();
-		Parser obj=new Parser(expression);
+		obj.setExpression(expression);
+		
 		try {
 		double result=obj.evaluate();
 		System.out.println(expression +"="+result);
 		}
 		catch(ParserException ex) 
 		{
+			sc.close();
 			ex.printStackTrace();
+			return;
 		}
-	
+		
+		System.out.println("Continue? y/n");
+		if(!sc.nextLine().equalsIgnoreCase("y")) 
+		{
+			break PARSER_LOOP;
+		}
+//		System.out.println();
+		}
+		sc.close();
 	}
-	//thows a ParserException whenever the parser encounters a predefined error.
+	
+	
+	
+	
+	//throws a ParserException whenever the parser encounters a predefined error.
 	private static  void handleError(int error) throws ParserException 
 	{
 	  String[] err_list= {
@@ -225,10 +273,63 @@ public final class Parser {
 			}
 			getToken();
 			break;
+		case VARIABLE:
+			result=this.findValue(token);//index variable and find it's value
+			getToken();
+			break;
 		default:
 			handleError(SYNTAX);
 		}
 		return result;
+	}
+	
+	//evaluates an assignment, if one is present. If not, it simply continues evaluation via add/sub eval.
+	//lowest priority, 1st in recursive descent parsing.
+	private double evaluateAssignment() throws ParserException
+	{
+		double result;
+		int var_index;
+		int tempType;
+		String tempToken;
+		
+		if(this.tokType==VARIABLE) 
+		{
+		  //save the token, in case next operator is not assignment(=)
+			tempToken=new String(this.token);
+			tempType=this.tokType;
+			//index at which to store assignment value.
+			var_index=Character.toUpperCase(this.token.charAt(0))-'A';
+			getToken(); //Proceed to next Token
+			//If next token is an assignment, proceed, if not put back the token and move the index pointer back the required number of
+			//spaces
+			if(!token.equals("=")) 
+			{
+				//Restore index pointer for expression
+				if(token!=EOE) 
+				{
+					for(int i=0;i<token.length();++i) 
+					{
+						this.expIdx--;
+					}
+				}
+				
+				//restore old token along with it's type
+				this.token=new String(tempToken);
+				this.tokType=tempType;
+			}
+			else 
+			{
+				getToken();//get expression after assignment operator to evaluate
+				result=this.evaluateAddSub();
+				this.variables[var_index]=result;
+				return result;
+				
+				
+			}
+		
+		}
+		return this.evaluateAddSub();
+		
 	}
 	
 	//Evaluates Parenthesis in an expression-6th in order for recursive descent calls
@@ -362,7 +463,7 @@ public final class Parser {
 		{
 	     handleError(Parser.NOEXP);
 		}
-		result=this.evaluateAddSub();
+		result=this.evaluateAssignment();
 		if(!token.equals(EOE)) 
 		{
 			Parser.handleError(SYNTAX);
