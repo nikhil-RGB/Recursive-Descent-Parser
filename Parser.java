@@ -26,9 +26,25 @@ public final class Parser {
 	//Token type, [NONE,DELIMITER,VARIABLE,NUMBER]
 	private int tokType;
 	
+	
+	//Array of values for variables, A-Z
+	double[] variables=new double[26];
+	
 	public Parser(String expression) 
 	{
 		this.exp=expression;
+	}
+	
+	//Finds and returns the value for variables A-Z
+	private double findValue(String name) throws ParserException 
+	{
+		if(!Character.isLetter(name.charAt(0))) 
+		{
+			handleError(Parser.SYNTAX);
+            return 0.0;		
+		}
+		double value=variables[Character.toUpperCase(name.charAt(0))-'A'];
+		return value;
 	}
 	
 	//Checks if input character is a delimiter
@@ -223,6 +239,10 @@ public final class Parser {
 			{
 				handleError(SYNTAX);
 			}
+			getToken();
+			break;
+		case VARIABLE:
+			result=this.findValue(token);//index variable and find it's value
 			getToken();
 			break;
 		default:
